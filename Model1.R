@@ -1,0 +1,78 @@
+setwd('C:/Users/huihu/Desktop/2021美赛')
+getwd()
+data=read.csv('Q1_data1.csv')
+t=0
+a=0
+b=0
+m=0
+c=0
+d=0
+e=0
+f=0
+x=log(c(data[,'e.rate']))
+y=log(c(data[,'d.rate.geo']))
+relation=lm(y~x)
+A=relation$coefficients['x']
+B=relation$coefficients['(Intercept)']
+for(i in 1:34){
+  m[i]=data[i,'water.mpa.at.max.r']
+  c[i]=data[i,'water.max.r']
+  d[i]=c[i]/2/(-data[i,'water.niche.low']-m[i])^2
+  e[i]=c[i]/2/(-data[i,'water.high']-m[i])^2
+  t[i]=data[i,'temp.temp.at.max.rate']
+  f[i]=exp(A*log(c[i])+B)
+  a[i]=(data[i,'d.rate10']-data[i,'d.rate22'])/((22-t[i])^2-(10-t[i])^2)
+  b[i]=data[i,'d.rate10']-f[i]+a[i]*(10-t[i])^2
+}
+result=data.frame('name'=c(data[,'gen.name2']),t,a,b,m,c,d,e)
+write.csv(result,'Q1_result.csv')
+
+f1<-function(j,t1){
+  result=-a[j]*(t1-t[j])^2+b[j]
+  return(result)
+}
+
+f2<-function(j,m1){
+  result=0
+  if(m1<m[j])
+    result=-d[j]*(m1-m[j])^2+c[j]
+  else
+    result=-e[j]*(m1-m[j])^2+c[j]
+  if(result>0.01){
+    h=exp(A*log(result)+B)
+  }
+  else{
+    h=0
+  }
+  return(h)
+}
+alpha<-function(j,t1,m1){
+  u=(0.1+r[j])*(1e-20+max(0,f1(j,t1)+f2(j,m1)))/(1e-20+max(0,f1(j,t[j])+f2(j,m[j])))
+  return(u)
+}
+v<-function(t1,m1){
+  s=0
+  l=0
+  for(j in 1:34){
+    s=s+E[j]*alpha(j,t1,m1)*max(0,(f1(j,t1)+f2(j,m1)))
+    l=l+E[j]*alpha(j,t1,m1)
+  }
+  result=s/l
+  return(result)
+}
+#绘图
+ggplot(data=data.frame(x,y),aes(x=x,y=y))+
+  geom_point(color="chartreuse4",alpha=0.5)+
+  geom_smooth(method='lm',color="cadetblue1")+
+  labs(x="log(extention rate)",y="log(decomposition rate)")
+col=rep('t',34)
+col=c(col,rep('a',34))
+col=c(col,rep('b',34))
+col=c(col,rep('m',34))
+col=c(col,rep('c',34))
+col=c(col,rep('d',34))
+col=c(col,rep('e',34))
+result1=data.frame('name'=rep(result[,'name'],7),parameter=c(t,a,b,m,c,d,e),col=col)
+ggplot(data=result1,aes(y=name,x=parameter,color=col))+
+  geom_point()+
+  scale_x_log10()
